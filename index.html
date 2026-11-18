@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MUX Lab · Multiplexador 2:1 e Conversão A/D | EEL280</title>
+<style>
+:root{
+  --fundo:#F2F2F7;--card:#FFFFFF;--card2:#F2F2F7;--off:#D1D1D6;--sep:#DCDCE0;--txt:#000000;--muted:#6E6E73;
+  --terc:#AEAEB2;--trilho:#E9E9EB;--azul:#007AFF;--verde:#34C759;--laranja:#FF9500;--verm:#FF3B30;
+  --roxo:#AF52DE;--indigo:#5856D6;--segbg:#EEEEEF;--segsel:#FFFFFF;--sombra:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04);
+  --ui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",Inter,"Helvetica Neue",Roboto,Arial,sans-serif;
+  --tit:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI Variable Display","Segoe UI",Inter,"Helvetica Neue",Arial,sans-serif;
+  --mono:"SF Mono",Menlo,"Cascadia Mono",Consolas,"JetBrains Mono","DejaVu Sans Mono",monospace;
+}
+[data-modo=escuro]{
+  --fundo:#000000;--card:#1C1C1E;--card2:#2C2C2E;--off:#3A3A3C;--sep:#38383A;--txt:#FFFFFF;--muted:#98989F;
+  --terc:#5A5A5F;--trilho:#39393D;--azul:#0A84FF;--verde:#30D158;--laranja:#FF9F0A;--verm:#FF453A;
+  --roxo:#BF5AF2;--indigo:#5E5CE6;--segbg:#2A2A2D;--segsel:#636366;--sombra:0 3px 8px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--fundo);color:var(--txt);font:14px/1.35 var(--ui);-webkit-font-smoothing:antialiased}
+.mono{font-family:var(--mono)}
+.mut{color:var(--muted)}
+#app{display:grid;grid-template-columns:356px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;height:100vh;padding:0 20px 18px;column-gap:14px}
+header{grid-column:1/3;display:flex;align-items:center;gap:12px;padding:12px 2px 6px}
+header h1{margin:0;font:700 30px/1.1 var(--tit);letter-spacing:-.4px}
+header .sub{color:var(--muted);font-size:13px;margin-top:2px}
+header .tit{flex:1;min-width:0}
+.pilula{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:15px;height:30px;padding:0 14px;font-weight:600;font-size:12px;white-space:nowrap}
+.pilula i{width:9px;height:9px;border-radius:50%;background:var(--laranja);display:block}
+.pilula.erro{background:color-mix(in srgb,var(--verm) 18%,var(--card))}
+#esq{grid-row:2/4;overflow-y:auto;scrollbar-width:none;padding-bottom:10px}
+#esq::-webkit-scrollbar{display:none}
+.sec-t{text-transform:uppercase;color:var(--muted);font-size:12px;margin:12px 14px 5px;letter-spacing:.2px}
+.card{background:var(--card);border-radius:12px;padding:12px}
+.rodape{color:var(--muted);font-size:12px;margin:6px 14px 0;line-height:1.4}
+.linha{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.kv{padding:4px}
+.kv>div{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;gap:10px}
+.kv>div+div{border-top:1px solid var(--sep);margin-left:10px;padding-left:0}
+.kv b{font:700 13px var(--mono);color:var(--muted);text-align:right}
+/* switch iOS */
+.sw{width:51px;height:31px;border-radius:16px;background:var(--trilho);position:relative;cursor:pointer;flex:none;transition:background .25s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 3px 8px rgba(0,0,0,.15),0 1px 1px rgba(0,0,0,.16);transition:transform .28s cubic-bezier(.3,.7,.4,1)}
+.sw.on{background:var(--verde)}
+.sw.on::after{transform:translateX(20px)}
+.sw.grande{width:66px;height:40px;border-radius:20px}
+.sw.grande::after{width:36px;height:36px}
+.sw.grande.on::after{transform:translateX(26px)}
+.sw.laranja.on{background:var(--laranja)}
+/* segmented control */
+.seg{display:inline-flex;position:relative;background:var(--segbg);border-radius:9px;padding:2px;user-select:none;max-width:100%}
+.seg button{flex:1 1 0;border:0;background:none;font:inherit;font-size:13px;padding:5px 12px;color:var(--txt);position:relative;z-index:1;cursor:pointer;white-space:nowrap;border-radius:7px}
+.seg button.sel{font-weight:600}
+.seg .pil{position:absolute;top:2px;bottom:2px;border-radius:7px;background:var(--segsel);box-shadow:var(--sombra);transition:left .28s cubic-bezier(.3,.7,.4,1),width .28s cubic-bezier(.3,.7,.4,1)}
+.seg.peq button{font-size:12px;padding:4px 10px}
+.seg.cheia{display:flex;width:100%}
+/* botoes */
+.bt{--c:var(--azul);border:0;border-radius:10px;font:inherit;font-weight:600;font-size:13px;padding:8px 16px;cursor:pointer;background:var(--c);color:#fff;transition:filter .15s,opacity .15s;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.bt.tinto{background:color-mix(in srgb,var(--c) 15%,var(--card));color:var(--c)}
+.bt:hover{filter:brightness(.95)}
+.bt:active{opacity:.5}
+.bt.mini{font-size:12px;padding:4px 10px;border-radius:7px}
+.bt[disabled]{opacity:.4;pointer-events:none}
+/* tiles */
+.tiles{display:flex}
+.tiles>div{flex:1;text-align:center;min-width:0}
+.tiles>div+div{border-left:1px solid var(--sep)}
+.tiles small{display:block;color:var(--muted);font-size:11px;font-weight:700}
+.tiles .v{font:700 24px/1.25 var(--tit);white-space:nowrap}
+.tiles .s{font:11px var(--mono);color:var(--muted);white-space:nowrap}
+/* area principal */
+#dir{display:flex;flex-direction:column;min-height:0;min-width:0}
+.barra{display:flex;gap:10px;align-items:center;padding:10px 0}
+#palco{flex:1;min-height:0;background:var(--card);border-radius:14px;padding:16px 18px;overflow:auto;position:relative}
+.pg{display:none;height:100%;flex-direction:column;gap:12px;min-height:0}
+.pg.ativa{display:flex}
+#pg2,#pg3,#pg6{height:auto;min-height:100%}
+.pg-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.pg-cab h2{margin:0;font:700 20px/1.2 var(--tit)}
+.badge{border-radius:14px;padding:5px 12px;font-weight:700;font-size:12px;white-space:nowrap}
+#app.foco{grid-template-columns:minmax(0,1fr)}
+#app.foco #esq,#app.foco #logc{display:none}
+#app.foco #dir{grid-column:1/2;grid-row:2/4}
+/* monitor */
+.mcards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.mcard{background:var(--card2);border-radius:12px;padding:10px 14px}
+.mcard small{color:var(--muted);font-size:11px;font-weight:700;text-transform:uppercase}
+.mcard .v{font:700 34px/1.15 var(--tit);white-space:nowrap}
+.mcard .s{font:12px var(--mono);color:var(--muted)}
+.bits{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px}
+.bit{border-radius:10px;background:var(--card2);text-align:center;padding:5px 0 4px;transition:background .15s}
+.bit b{display:block;font:700 22px/1.2 var(--mono);color:var(--terc)}
+.bit small{display:block;font:10px var(--mono);color:var(--muted)}
+.bit.on{background:color-mix(in srgb,var(--verde) 22%,var(--card))}
+.bit.on b{color:var(--verde)}
+.bit.sel{outline:2px solid var(--laranja);outline-offset:-2px}
+canvas{display:block;width:100%}
+.cvbox{flex:1;min-height:200px;position:relative}
+.cvbox canvas{position:absolute;inset:0;height:100%}
+.bot{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px;align-items:center}
+.ind{width:200px;height:200px;border-radius:50%;margin:8px auto;background:var(--off);display:flex;align-items:center;justify-content:center;transition:all .12s;color:#fff;font:700 15px var(--tit);text-align:center}
+.ind.on{background:var(--verde);box-shadow:0 0 0 16px color-mix(in srgb,var(--verde) 22%,var(--card)),0 0 70px color-mix(in srgb,var(--verde) 70%,transparent)}
+.ind span{opacity:.85}
+.botTxt{text-align:center;font:700 26px var(--tit);margin-top:10px}
+.legenda{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);align-items:center}
+.legenda i{display:inline-block;width:18px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.vazio{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:10px;text-align:center}
+.vazio b{font:700 18px var(--tit);color:var(--txt)}
+/* tabelas */
+table.t{border-collapse:separate;border-spacing:0;font-size:13px}
+table.t th{color:var(--muted);font-weight:700;font-size:12px;padding:6px 12px;background:var(--card2);text-align:center}
+table.t th:first-child{border-radius:12px 0 0 12px}
+table.t th:last-child{border-radius:0 12px 12px 0}
+table.t td{padding:6px 12px;border-bottom:1px solid var(--sep);text-align:center;font:600 14px var(--mono)}
+table.t tr.hl td{background:color-mix(in srgb,var(--azul) 11%,var(--card))}
+table.t tr.hl td:first-child{box-shadow:inset 3px 0 0 var(--azul)}
+.um{color:var(--verde)}.zero{color:var(--terc)}
+.grade2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px 26px}
+.bloco h3{margin:0 0 8px;font:700 15px var(--tit)}
+.eq{font:14px/1.7 var(--mono)}
+.nota{font-size:12px;color:var(--muted);line-height:1.45}
+.chip{display:inline-block;background:var(--card2);border-radius:9px;padding:5px 10px;margin:3px 0;font-size:12px;font-weight:600}
+.seta{color:var(--muted);margin:0 4px}
+.fluxo{line-height:2.1}
+.lin{font:12px/1.65 var(--mono);white-space:pre;overflow:hidden;text-overflow:ellipsis}
+.lin .ok{color:var(--verde)}.lin .no{color:var(--verm)}
+.reg{display:flex;gap:3px;align-items:center}
+.reg span{width:30px;height:30px;border-radius:7px;background:var(--card2);display:flex;align-items:center;justify-content:center;font:700 11px var(--mono);color:var(--muted)}
+.reg span.um{background:color-mix(in srgb,var(--verde) 22%,var(--card));color:var(--verde)}
+.reg span.x{opacity:.45}
+.reg em{font-style:normal;font:700 12px var(--mono);width:58px;color:var(--muted)}
+/* log */
+#logc{min-width:0}
+.logtop{display:flex;align-items:center;gap:8px}
+.logtop .sec-t{flex:1}
+.tabwrap{height:132px;overflow-y:auto}
+#tbLog{width:100%;border-collapse:collapse;font:12px var(--mono)}
+#tbLog th{position:sticky;top:0;background:var(--card);color:var(--muted);font:700 11px var(--ui);text-align:left;padding:4px 8px}
+#tbLog td{padding:4px 8px;white-space:nowrap;border-top:1px solid var(--sep)}
+#tbLog td:nth-child(3){white-space:normal;width:55%}
+#tbLog tr.cmd td{color:var(--azul)}#tbLog tr.erro td{color:var(--verm)}#tbLog tr.botao td{color:var(--verde)}#tbLog tr.sis td{color:var(--muted)}
+#toast{position:fixed;left:50%;bottom:30px;transform:translate(-50%,20px);background:#1C1C1E;color:#fff;border-radius:19px;padding:9px 20px 9px 16px;font-weight:600;font-size:13px;display:flex;gap:10px;align-items:center;opacity:0;pointer-events:none;transition:all .25s;z-index:9}
+[data-modo=escuro] #toast{background:#3A3A3C}
+#toast.vis{opacity:1;transform:translate(-50%,0)}
+#toast i{width:10px;height:10px;border-radius:50%;display:block}
+input[type=range]{width:100%;accent-color:var(--azul)}
+.sim-only{display:none}
+.modo-sim .sim-only{display:block}
+.hold{user-select:none;touch-action:none}
+#segAbas{overflow-x:auto;scrollbar-width:none}
+#segAbas::-webkit-scrollbar{display:none}
+/* telas menores (notebook, projetor, janela pela metade) */
+@media (max-width:1320px){
+  #app{grid-template-columns:300px minmax(0,1fr);padding:0 12px 12px;column-gap:10px}
+  .mcard .v{font-size:26px}
+  .bot{grid-template-columns:210px minmax(0,1fr)}
+  .ind{width:160px;height:160px}
+  .seg button{padding:5px 9px}
+}
+@media (max-width:1060px){
+  #app{display:flex;flex-direction:column;height:auto;min-height:100vh;padding:0 10px 12px}
+  header{flex-wrap:wrap}
+  header .tit{flex-basis:100%}
+  #dir{order:1;height:88vh;min-height:520px}
+  #esq{order:2;overflow:visible}
+  #logc{order:3}
+  .mcards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .bot{grid-template-columns:1fr}
+  .grade2{grid-template-columns:1fr}
+  .bits{gap:3px}
+  .bit b{font-size:17px}
+  #palco{padding:12px}
+  #app.foco #dir{height:94vh}
+}
+svg text{font-family:var(--mono)}
+.modo-iot .local-only{display:none}
+.iot-tag{display:none;background:color-mix(in srgb,var(--indigo) 16%,var(--card));color:var(--indigo);border-radius:15px;height:30px;padding:0 12px;align-items:center;font-weight:700;font-size:12px;white-space:nowrap}
+.modo-iot .iot-tag{display:flex}
+@media (max-width:1060px){
+  #esq{display:contents}
+  #esq>*{order:2}
+  #blocoS{order:0}
+  header{order:-1}
+  #dir{order:1}
+  #logc{order:3}
+}
+@media (max-width:640px){
+  #app{padding:0 8px 10px}
+  header{padding:10px 2px 4px;gap:8px}
+  header h1{font-size:24px}
+  header .sub{font-size:11px}
+  #segModo button{padding:4px 9px;font-size:12px}
+  .pilula{height:28px;font-size:11px;padding:0 10px}
+  .sec-t{margin:10px 8px 4px}
+  .rodape{margin:5px 8px 0}
+  #dir{height:auto;min-height:0}
+  #palco{padding:10px;overflow:visible}
+  .pg.ativa{min-height:560px}
+  .barra{padding:8px 0}
+  #btFoco{display:none}
+  .seg button{padding:5px 8px}
+  .mcards{grid-template-columns:1fr 1fr;gap:8px}
+  .mcard{padding:8px 10px}
+  .mcard .v{font-size:22px}
+  .mcard .s{font-size:10px}
+  .bits{gap:2px}
+  .bit b{font-size:14px}
+  .bit small{font-size:8px}
+  .ind{width:130px;height:130px;font-size:12px}
+  .botTxt{font-size:20px}
+  .pg-cab h2{font-size:17px}
+  .cvbox{min-height:230px}
+  .tabwrap{height:180px}
+  #tbLog th:nth-child(4),#tbLog td:nth-child(4),#tbLog th:nth-child(5),#tbLog td:nth-child(5),#tbLog th:nth-child(2),#tbLog td:nth-child(2){display:none}
+  #tbLog td{white-space:normal}
+  table.t td,table.t th{padding:5px 6px}
+}
+svg .clic{cursor:pointer}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="tit">
+      <h1>MUX Lab</h1>
+      <div class="sub">Multiplexador 2:1 + conversão A/D de 10 bits &nbsp;·&nbsp; Y = S̄·I0 + S·I1 &nbsp;·&nbsp; Arduino Uno + Python + API web &nbsp;·&nbsp; EEL280</div>
+    </div>
+    <div class="iot-tag">IoT · MQTT</div>
+    <div class="pilula" id="pilula"><i></i><span>Conectando…</span></div>
+    <div id="segModo"></div>
+  </header>
+
+  <aside id="esq">
+    <div id="blocoS">
+    <div class="sec-t">Seleção S · bit de controle do MUX</div>
+    <div class="card">
+      <div class="linha">
+        <div>
+          <div style="font:700 26px var(--tit)">S = <span id="sVal">0</span></div>
+          <div class="mut" id="sDesc" style="font-size:13px">canal I0 · botão (D2)</div>
+        </div>
+        <div class="sw grande" id="swS" title="Atalho: S"></div>
+      </div>
+      <div class="linha" style="margin-top:10px;font-size:12px">
+        <span id="sOp0" style="font-weight:700">0 · Botão D2</span>
+        <span id="sOp1" class="mut">1 · Potenciômetro A0</span>
+      </div>
+    </div>
+    <div class="rodape">Chave virtual de 2 posições. Trocar S muda só a visualização: o Arduino e a API continuam rodando. Atalho: tecla S.</div>
+    </div>
+
+    <div class="sec-t">Saída Y · canal ativo</div>
+    <div class="card">
+      <div class="tiles">
+        <div><small>CANAL</small><div class="v" id="tCanal" style="color:var(--indigo)">I0</div><div class="s" id="tCanalS">botão D2</div></div>
+        <div><small>Y</small><div class="v" id="tY" style="color:var(--azul)">0</div><div class="s" id="tYS">decimal</div></div>
+        <div><small id="tGrdT">NÍVEL</small><div class="v" id="tGrd" style="color:var(--verde)">0</div><div class="s" id="tGrdS">solto</div></div>
+      </div>
+    </div>
+    <div class="card kv" style="margin-top:8px">
+      <div><span>Binário (10 bits)</span><b id="kBin">0000000000</b></div>
+      <div><span>Aquisição (Arduino)</span><b id="kTms">—</b></div>
+      <div><span>Recebida no PC</span><b id="kTpc">—</b></div>
+    </div>
+
+    <div class="sec-t">Suavização do gráfico</div>
+    <div class="card">
+      <div id="segFiltro" class="seg cheia"></div>
+      <div class="linha" style="margin-top:12px"><span id="lbParam">α (alfa)</span><b class="mono" id="vParam">0,20</b></div>
+      <input type="range" id="rgParam" min="0" max="100" value="20">
+    </div>
+    <div class="rodape" id="formula"></div>
+
+    <div class="sec-t">Gráfico</div>
+    <div class="card">
+      <div class="linha"><span>Janela</span><div id="segJanela" class="seg peq"></div></div>
+      <div class="linha" style="margin-top:10px"><span>Eixo vertical</span><div id="segEixo" class="seg peq"></div></div>
+    </div>
+
+    <div class="sec-t">Comunicação</div>
+    <div class="card kv">
+      <div><span>Estado</span><b id="cEst">—</b></div>
+      <div><span>Porta serial</span><b id="cPorta">—</b></div>
+      <div><span>Taxa A0 / D2</span><b id="cTaxa">—</b></div>
+      <div><span>Última amostra</span><b id="cUlt">—</b></div>
+      <div><span>Perdidas / inválidas</span><b id="cErr">—</b></div>
+      <div><span id="lbApi">API tempo real (SSE)</span><b id="cApi">—</b></div>
+      <div><span>Acesso remoto (IoT)</span><b id="cIot">—</b></div>
+    </div>
+    <div class="rodape" id="cMsg"></div>
+    <div style="margin:8px 0 0"><button class="bt tinto" style="--c:var(--azul);width:100%" id="btRecon">↻ Reconectar ao Arduino</button></div>
+    <div class="sec-t">Acesso pelo celular · IoT</div>
+    <div class="card" style="font-size:13px;line-height:1.5">
+      <div id="iotTxt" class="mut">—</div>
+      <a id="iotLink" class="mono" style="color:var(--azul);word-break:break-all;font-size:12px" target="_blank"></a>
+    </div>
+
+    <div class="sim-only">
+      <div class="sec-t">Simulação · sem Arduino</div>
+      <div class="card">
+        <div class="linha"><span>Botão virtual (segure)</span>
+          <button class="bt hold" style="--c:var(--verde)" id="btSimBot">● Pressionar</button></div>
+        <div class="linha" style="margin-top:12px"><span>Potenciômetro automático</span><div class="sw laranja" id="swAuto"></div></div>
+        <div class="linha" style="margin-top:10px"><span>Posição</span><b class="mono" id="vSimPot">auto</b></div>
+        <input type="range" id="rgSimPot" min="0" max="1023" value="512">
+      </div>
+      <div class="rodape">Só aparece sem Arduino. As amostras simuladas seguem o mesmo protocolo do firmware.</div>
+    </div>
+    <div style="height:8px"></div>
+  </aside>
+
+  <main id="dir">
+    <div class="barra">
+      <div id="segAbas" class="seg" style="flex:1"></div>
+      <button class="bt tinto" style="--c:var(--azul)" id="btFoco">⤢ Ampliar</button>
+    </div>
+    <div id="palco">
+      <!-- MONITOR -->
+      <div class="pg" id="pg0">
+        <div class="pg-cab">
+          <div><h2 id="monTit">—</h2><div class="mut" id="monSub" style="font-size:13px">—</div></div>
+          <div class="badge" id="monBadge">—</div>
+        </div>
+        <div id="monBot" style="display:none;flex:1;flex-direction:column;gap:12px;min-height:0">
+          <div class="bot">
+            <div><div class="ind" id="ind"><span>D2</span></div><div class="botTxt" id="botTxt">SOLTO</div></div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div class="mcards">
+                <div class="mcard"><small>Nível lógico Y</small><div class="v" id="bNivel">0</div><div class="s">1 = pressionado</div></div>
+                <div class="mcard"><small>Acionamentos</small><div class="v" id="bCont" style="color:var(--azul)">0</div>
+                  <div class="s"><button class="bt mini tinto" style="--c:var(--azul)" id="btZerar">zerar</button></div></div>
+                <div class="mcard"><small>Pino D2 (elétrico)</small><div class="v" id="bPino">1</div><div class="s" id="bPinoS">HIGH · pull-up</div></div>
+              </div>
+              <div class="nota" id="bMud">—</div>
+              <div class="nota">Debounce no firmware: o nível de D2 só é aceito depois de 25 ms estável. Normalização: pino LOW (pressionado) → 1, pino HIGH (solto) → 0.</div>
+            </div>
+          </div>
+          <div class="sec-t" style="margin:4px 0 0">Linha do tempo do canal · últimos 10 s</div>
+          <div class="cvbox" style="min-height:120px"><canvas id="cvBot"></canvas></div>
+        </div>
+        <div id="monPot" style="display:none;flex:1;flex-direction:column;gap:12px;min-height:0">
+          <div class="mcards">
+            <div class="mcard"><small>Código ADC (10 bits) · bruto</small><div class="v" id="pCod" style="color:var(--azul)">0</div><div class="s" id="pHex">0x000</div></div>
+            <div class="mcard"><small>Tensão estimada · bruta</small><div class="v" id="pV" style="color:var(--verde)">0,000 V</div><div class="s">V ≈ código × VREF / 1023</div></div>
+            <div class="mcard"><small id="pSuavT">Suavizado (EMA)</small><div class="v" id="pSuav" style="color:var(--indigo)">—</div><div class="s" id="pSuavS">só no gráfico</div></div>
+          </div>
+          <div class="bits" id="bitsMon"></div>
+          <div class="cvbox"><canvas id="cvPot"></canvas></div>
+          <div class="legenda">
+            <span><i style="background:var(--terc)"></i>amostras brutas (sem suavização)</span>
+            <span><i style="background:var(--azul);height:4px"></i><span id="legSuav">curva suavizada</span></span>
+            <span id="legTaxa"></span>
+          </div>
+        </div>
+        <div id="monVazio" class="vazio"><b>Aguardando amostras…</b><span id="monVazioS"></span></div>
+      </div>
+
+      <!-- CIRCUITO -->
+      <div class="pg" id="pg1">
+        <div class="pg-cab">
+          <div><h2>MUX 2:1 porta a porta</h2><div class="mut" style="font-size:13px">o mesmo circuito que o Python avalia a cada amostra · clique em S para alternar · clique num bit do barramento</div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><div id="segTema1" class="seg peq"></div></div>
+        </div>
+        <div style="flex:1;min-height:0" id="svgCirc"></div>
+      </div>
+
+      <!-- TABELA -->
+      <div class="pg" id="pg2"><div id="tabBox" style="display:flex;flex-direction:column;gap:14px"></div></div>
+
+      <!-- CONVERSAO A/D -->
+      <div class="pg" id="pg3"><div id="adcBox" style="display:flex;flex-direction:column;gap:14px;flex:1"></div></div>
+
+      <!-- FIACAO -->
+      <div class="pg" id="pg4">
+        <div class="pg-cab">
+          <div><h2>Fiação física</h2><div class="mut" style="font-size:13px">só os dois componentes do roteiro: potenciômetro em A0 e botão em D2 (INPUT_PULLUP)</div></div>
+          <div id="segTema4" class="seg peq"></div>
+        </div>
+        <div style="flex:1;min-height:0" id="svgFio"></div>
+      </div>
+
+      <!-- ONDAS -->
+      <div class="pg" id="pg5">
+        <div class="pg-cab">
+          <div><h2>Analisador lógico · últimos 10 s</h2><div class="mut" style="font-size:13px">entradas I0 e I1 chegam sempre; a saída Y segue a entrada escolhida por S</div></div>
+        </div>
+        <div class="cvbox"><canvas id="cvOndas"></canvas></div>
+      </div>
+
+      <!-- PROTOCOLO -->
+      <div class="pg" id="pg6"><div id="protBox" class="grade2"></div></div>
+    </div>
+  </main>
+
+  <section id="logc">
+    <div class="logtop">
+      <div class="sec-t">Registro de eventos</div>
+      <a class="bt mini tinto local-only" style="--c:var(--azul)" href="/api/amostras.csv">Amostras CSV</a>
+      <a class="bt mini tinto local-only" style="--c:var(--azul)" href="/api/log.csv">Salvar log CSV</a>
+    </div>
+    <div class="card" style="padding:6px 8px">
+      <div class="tabwrap"><table id="tbLog"><thead><tr><th>Hora</th><th>Origem</th><th>Evento</th><th>S</th><th>Canal</th><th>Valor</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </section>
+</div>
+<div id="toast"><i></i><span></span></div>
+
+<script>
+"use strict";
+// ============================== utilidades ==============================
+const $ = id => document.getElementById(id);
+const br = (x, c = 2) => Number(x).toLocaleString('pt-BR', {minimumFractionDigits: c, maximumFractionDigits: c});
+const bin10 = v => (v >>> 0).toString(2).padStart(10, '0').slice(-10);
+const hora = t => { if (t == null) return '—'; const d = new Date(t * 1000);
+  return d.toLocaleTimeString('pt-BR', {hour12: false}) + '.' + String(d.getMilliseconds()).padStart(3, '0'); };
+const tms = t => t == null ? '—' : br(t / 1000, 3) + ' s';
+function mix(a, b, t) {                                   // mistura duas cores #rrggbb
+  const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  const x = p(a), y = p(b);
+  return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join('');
+}
+const C = {};                                               // cores atuais (CSS -> JS)
+function lerCores() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const n of ['fundo', 'card', 'card2', 'off', 'sep', 'txt', 'muted', 'terc', 'azul', 'verde', 'laranja', 'verm', 'roxo', 'indigo'])
+    C[n] = cs.getPropertyValue('--' + n).trim();
+}
+const guarda = {get(k, d) { try { const v = localStorage.getItem('muxlab.' + k); return v == null ? d : v; } catch (e) { return d; } },
+                set(k, v) { try { localStorage.setItem('muxlab.' + k, v); } catch (e) {} }};
+
+// ---- segmented control do iOS ----
+function Segmentado(host, opcoes, valor, aoMudar) {
+  host.classList.add('seg'); host.innerHTML = '';
+  const pil = document.createElement('div'); pil.className = 'pil'; host.appendChild(pil);
+  const obj = {valor};
+  const bts = opcoes.map(([v, t]) => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.dataset.v = String(v);
+    b.onclick = () => { if (String(obj.valor) !== String(v)) { obj.set(v); aoMudar && aoMudar(v); } };
+    host.appendChild(b); return b;
+  });
+  function posiciona() { const b = bts.find(b => b.dataset.v === String(obj.valor)); if (!b) return;
+    pil.style.left = b.offsetLeft + 'px'; pil.style.width = b.offsetWidth + 'px'; }
+  obj.set = v => { obj.valor = v; bts.forEach(b => b.classList.toggle('sel', b.dataset.v === String(v))); posiciona(); };
+  new ResizeObserver(posiciona).observe(host);
+  obj.set(valor); return obj;
+}
+function toast(msg, cor = 'azul') {
+  const t = $('toast'); t.querySelector('span').textContent = msg; t.querySelector('i').style.background = C[cor] || cor;
+  t.classList.add('vis'); clearTimeout(toast.job); toast.job = setTimeout(() => t.classList.remove('vis'), 2600);
+}
+async function api(url, corpo) {
+  if (IOT) {                                  // no modo IoT os comandos vao pelo broker
+    const cmd = {'/api/s': corpo, '/api/zerar': {zerar: 1}, '/api/reconectar': {reconectar: 1}, '/api/sim': {sim: corpo}}[url];
+    if (!mq || !mq.connected) { toast('Sem conexão com o broker MQTT', 'verm'); return null; }
+    mq.publish(TOPICO + '/cmd', JSON.stringify(cmd || {}));
+    return {ok: true};
+  }
+  try {
+    const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(corpo || {})});
+    return await r.json();
+  } catch (e) { toast('API indisponível · o servidor Python está rodando?', 'verm'); return null; }
+}
+
+// ============================== transporte: local (SSE) ou IoT (MQTT) ==============================
+// Mesma pagina nos dois lugares: aberta pelo PC (127.0.0.1) fala com a API Flask por HTTP + SSE;
+// hospedada (GitHub Pages) fala com o PC pelo broker MQTT.
+const PRM = new URLSearchParams(location.search);
+const IOT = PRM.has('iot') || !['127.0.0.1', 'localhost'].includes(location.hostname);
+const IOT_ID = PRM.get('id') || 'tkidrdrm';
+const TOPICO = 'eel280/muxlab/' + IOT_ID;
+const BROKER = PRM.get('broker') || 'wss://broker.hivemq.com:8884/mqtt';
+let mq = null;
+if (IOT) document.documentElement.classList.add('modo-iot');
+
+// ============================== estado ==============================
+const E = {
+  s: 0, sPend: 0, st: {}, y: null, ent: {0: null, 1: null}, acion: 0, srvT: 0, cfg: {vref: 5, taxa: 50},
+  modo: guarda.get('modo', 'claro'), tema: guarda.get('tema', 'iOS'), aba: +guarda.get('aba', 0),
+  filtro: guarda.get('filtro', 'ema'), alfa: +guarda.get('alfa', 0.2), N: +guarda.get('N', 10),
+  janela: +guarda.get('janela', 20), eixo: guarda.get('eixo', 'v'), bit: +guarda.get('bit', 0),
+  sse: 'conectando', linhas: [], ondas: [], sujo: true, ultQuadro: 0, brk: 'conectando', pcOnline: null
+};
+const B = {0: [], 1: []};                // amostras da SAIDA do MUX por canal: [t_ms, valor]
+const vref = () => E.cfg.vref || 5;
+
+// ============================== montagem ==============================
+function aplicarModo() {
+  document.documentElement.dataset.modo = E.modo; lerCores(); E.sujo = true;
+}
+aplicarModo();
+const segModo = Segmentado($('segModo'), [['claro', '☀  Claro'], ['escuro', '☾  Escuro']], E.modo, v => {
+  E.modo = v; guarda.set('modo', v); aplicarModo();
+});
+const ABAS = ['Monitor', 'Circuito', 'Tabela', 'Conversão A/D', 'Fiação', 'Ondas', 'Protocolo'];
+const segAbas = Segmentado($('segAbas'), ABAS.map((t, i) => [i, t]), E.aba, v => mostraAba(+v));
+function mostraAba(i) {
+  E.aba = i; guarda.set('aba', i); segAbas.set(i);
+  document.querySelectorAll('.pg').forEach((p, k) => p.classList.toggle('ativa', k === i)); E.sujo = true;
+}
+mostraAba(E.aba);
+const temas = [];
+for (const id of ['segTema1', 'segTema4'])
+  temas.push(Segmentado($(id), [['iOS', 'iOS'], ['CircuitMaker', 'CircuitMaker']], E.tema, v => {
+    E.tema = v; guarda.set('tema', v); temas.forEach(t => t.set(v)); E.sujo = true; }));
+Segmentado($('segFiltro'), [['ema', 'Filtro exponencial'], ['mm', 'Média móvel']], E.filtro, v => {
+  E.filtro = v; guarda.set('filtro', v); ajustaFiltro(); });
+Segmentado($('segJanela'), [[10, '10 s'], [20, '20 s'], [30, '30 s']], E.janela, v => { E.janela = +v; guarda.set('janela', v); E.sujo = true; });
+Segmentado($('segEixo'), [['v', 'Tensão'], ['c', 'Código']], E.eixo, v => { E.eixo = v; guarda.set('eixo', v); E.sujo = true; });
+function ajustaFiltro() {
+  const rg = $('rgParam');
+  if (E.filtro === 'ema') {
+    rg.min = 2; rg.max = 90; rg.value = Math.round(E.alfa * 100); $('lbParam').textContent = 'α (alfa)';
+    $('vParam').textContent = br(E.alfa, 2);
+    const tau = -(1 / (E.cfg.taxa || 50)) / Math.log(1 - E.alfa);
+    $('formula').innerHTML = `Filtro exponencial (EMA):<br><span class="mono">y[n] = α·x[n] + (1 − α)·y[n−1]</span><br>` +
+      `α = ${br(E.alfa, 2)} · constante de tempo ≈ −T/ln(1−α) = ${br(tau * 1000, 0)} ms (T = 20 ms). Só o gráfico é suavizado; os valores numéricos são brutos.`;
+    $('legSuav').textContent = `curva suavizada (EMA, α = ${br(E.alfa, 2)})`;
+  } else {
+    rg.min = 2; rg.max = 50; rg.value = E.N; $('lbParam').textContent = 'N (janela)';
+    $('vParam').textContent = E.N + ' amostras';
+    $('formula').innerHTML = `Média móvel:<br><span class="mono">y[n] = (1/N)·Σ x[n−k], k = 0…N−1</span><br>` +
+      `N = ${E.N} amostras = ${E.N * 20} ms a 50 amostras/s (atraso ≈ ${E.N * 10} ms). Só o gráfico é suavizado; os valores numéricos são brutos.`;
+    $('legSuav').textContent = `curva suavizada (média móvel, N = ${E.N})`;
+  }
+  $('pSuavT').textContent = E.filtro === 'ema' ? 'Suavizado (EMA)' : 'Suavizado (média móvel)';
+  E.sujo = true;
+}
+$('rgParam').oninput = e => {
+  const v = +e.target.value;
+  if (E.filtro === 'ema') { E.alfa = v / 100; guarda.set('alfa', E.alfa); } else { E.N = v; guarda.set('N', v); }
+  ajustaFiltro();
+};
+
+// ---- selecao S ----
+$('swS').onclick = () => setS(1 - E.s);
+async function setS(v) {
+  aplicaS(v); E.sPend = performance.now();
+  const r = await api('/api/s', {s: v});
+  if (r && !IOT) carregaHistorico();
+}
+function aplicaS(v) {
+  if (E.s !== v) { B[0] = []; B[1] = []; }
+  E.s = v;
+  $('swS').classList.toggle('on', !!v); $('sVal').textContent = v;
+  $('sDesc').textContent = v ? 'canal I1 · potenciômetro (A0)' : 'canal I0 · botão (D2)';
+  $('sOp0').style.fontWeight = v ? 400 : 700; $('sOp0').className = v ? 'mut' : '';
+  $('sOp1').style.fontWeight = v ? 700 : 400; $('sOp1').className = v ? '' : 'mut';
+  E.sujo = true;
+}
+async function carregaHistorico() {
+  if (IOT) { if (mq && mq.connected) mq.publish(TOPICO + '/cmd', JSON.stringify({hist: 1})); return; }
+  try {
+    const r = await (await fetch('/api/historico')).json();
+    if (r.s === E.s) B[r.s] = r.amostras;
+    E.sujo = true;
+  } catch (e) {}
+}
+
+$('btFoco').onclick = () => modoFoco();
+function modoFoco() { const f = $('app').classList.toggle('foco'); $('btFoco').textContent = f ? '⤡ Restaurar' : '⤢ Ampliar'; E.sujo = true; }
+$('btRecon').onclick = () => { api('/api/reconectar'); toast('Procurando o Arduino…', 'laranja'); };
+$('btZerar').onclick = () => api('/api/zerar');
+// simulacao
+const simBot = v => api('/api/sim', {botao: v});
+$('btSimBot').onpointerdown = e => { e.target.setPointerCapture(e.pointerId); simBot(1); };
+$('btSimBot').onpointerup = $('btSimBot').onpointercancel = () => simBot(0);
+$('swAuto').onclick = () => {
+  const auto = !$('swAuto').classList.contains('on');
+  api('/api/sim', {pot: auto ? null : +$('rgSimPot').value});
+};
+$('rgSimPot').oninput = e => api('/api/sim', {pot: +e.target.value});
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  if (k === 's') setS(1 - E.s);
+  else if (k === 'f') modoFoco();
+  else if (k === 't') { E.modo = E.modo === 'claro' ? 'escuro' : 'claro'; guarda.set('modo', E.modo); segModo.set(E.modo); aplicarModo(); }
+  else if (k >= '1' && k <= '7') mostraAba(+k - 1);
+});
+
+// bits do monitor
+$('bitsMon').innerHTML = Array.from({length: 10}, (_, i) => 9 - i)
+  .map(k => `<div class="bit" id="mb${k}"><small>D${k}</small><b>0</b><small>${1 << k}</small></div>`).join('');
+
+// ============================== tempo real (SSE) ==============================
+function conectaSSE() {
+  const es = new EventSource('/api/stream');
+  es.onopen = () => { if (E.sse !== 'ok') { E.sse = 'ok'; carregaHistorico(); } };
+  es.onerror = () => { E.sse = 'erro'; atualizaPilula(); };
+  es.onmessage = ev => { E.sse = 'ok'; quadro(JSON.parse(ev.data)); };
+}
+function conectaIoT() {
+  const usa = () => {
+    mq = mqtt.connect(BROKER, {clientId: 'muxlab-web-' + Math.random().toString(16).slice(2, 10), clean: true,
+                               reconnectPeriod: 2000, connectTimeout: 10000, keepalive: 20});
+    mq.on('connect', () => { E.brk = 'ok'; mq.subscribe([TOPICO + '/dados', TOPICO + '/hist', TOPICO + '/online']);
+      mq.publish(TOPICO + '/cmd', JSON.stringify({hist: 1})); E.sujo = true; });
+    mq.on('reconnect', () => { E.brk = 'conectando'; E.sujo = true; });
+    mq.on('offline', () => { E.brk = 'erro'; E.sujo = true; });
+    mq.on('close', () => { if (E.brk === 'ok') E.brk = 'erro'; E.sujo = true; });
+    mq.on('error', () => { E.brk = 'erro'; E.sujo = true; });
+    mq.on('message', (top, msg) => {
+      let d; try { d = JSON.parse(msg.toString()); } catch (e) { return; }
+      if (top.endsWith('/dados')) { E.sse = 'ok'; if (!E.cfg.st) E.cfg.st = d.st; quadro(d); }
+      else if (top.endsWith('/hist')) {
+        if (d.s === E.s || performance.now() - E.sPend > 800) { if (d.s !== E.s) aplicaS(d.s); B[d.s] = d.amostras; }
+        if (!E.logIni) { E.logIni = true; d.log.forEach(addLog); }
+        E.sujo = true;
+      } else if (top.endsWith('/online')) { E.pcOnline = d === 1; E.sujo = true; }
+    });
+  };
+  if (window.mqtt) return usa();
+  const sc = document.createElement('script'); sc.src = 'mqtt.min.js'; sc.onload = usa;
+  sc.onerror = () => { const c2 = document.createElement('script'); c2.src = 'https://unpkg.com/mqtt@5.16.1/dist/mqtt.min.js';
+    c2.onload = usa; c2.onerror = () => { E.brk = 'erro'; toast('Não foi possível carregar o cliente MQTT', 'verm'); }; document.head.appendChild(c2); };
+  document.head.appendChild(sc);
+}
+let estAnt = null;
+function quadro(q) {
+  E.srvT = q.t; E.st = q.st; E.y = q.y; E.ent = q.ent; E.acion = q.acion; E.ultQuadro = performance.now();
+  if (q.s !== E.s && performance.now() - E.sPend > 800) { aplicaS(q.s); carregaHistorico(); }
+  if (q.s === E.s) {
+    const b = B[q.s];
+    for (const p of q.sel) {
+      if (b.length && p[0] + 1000 < b[b.length - 1][0]) b.length = 0;   // Arduino reiniciou
+      b.push(p);
+    }
+    const lim = b.length ? b[b.length - 1][0] - 31000 : 0;
+    let i = 0; while (i < b.length && b[i][0] < lim) i++; if (i) b.splice(0, i);
+  }
+  const i0 = q.ent[0] ? q.ent[0][0] : 0, i1 = q.ent[1] ? q.ent[1][0] : 0;
+  E.ondas.push([q.t, q.s, i0, i1, q.y.valor]);
+  while (E.ondas.length && E.ondas[0][0] < q.t - 11) E.ondas.shift();
+  for (const l of (q.lin || [])) E.linhas.push(l);
+  if (E.linhas.length > 16) E.linhas.splice(0, E.linhas.length - 16);
+  for (const l of q.log) addLog(l);
+  if (q.st.estado !== estAnt) {
+    const m = {ok: ['Arduino conectado · ' + q.st.porta, 'verde'], sim: ['Modo simulação · sem Arduino', 'laranja'],
+               caiu: ['Arduino DESCONECTADO · tentando reconectar', 'verm'], ocupada: ['Porta serial em uso por outro processo', 'verm'],
+               procurando: ['Procurando o Arduino…', 'laranja']}[q.st.estado];
+    if (estAnt !== null && m) toast(m[0], m[1]);
+    estAnt = q.st.estado;
+    $('app').classList.toggle('modo-sim', q.st.estado === 'sim');
+  }
+  E.sujo = true;
+}
+function addLog(l) {        // [hora, origem, evento, S, canal, valor, tag]
+  E.logIni = true;
+  const tb = $('tbLog').tBodies[0];
+  const tr = document.createElement('tr'); tr.className = l[6];
+  for (const c of l.slice(0, 6)) { const td = document.createElement('td'); td.textContent = c; tr.appendChild(td); }
+  tb.insertBefore(tr, tb.firstChild);
+  while (tb.rows.length > 300) tb.deleteRow(-1);
+}
+
+// ============================== painel lateral ==============================
+function atualizaPilula() {
+  const st = E.st, p = $('pilula');
+  let txt, cor, erro = false;
+  const atraso = st.t_ultima ? E.srvT - st.t_ultima : null;
+  if (IOT && E.brk !== 'ok') { txt = E.brk === 'erro' ? 'Sem conexão com o broker MQTT' : 'Conectando ao broker MQTT…'; cor = E.brk === 'erro' ? C.verm : C.laranja; erro = E.brk === 'erro'; }
+  else if (IOT && E.pcOnline === false) { txt = 'PC do laboratório offline'; cor = C.verm; erro = true; }
+  else if (IOT && E.sse !== 'ok') { txt = 'Aguardando dados do PC…'; cor = C.laranja; }
+  else if (E.sse !== 'ok') { txt = 'API offline · tentando reconectar'; cor = C.verm; erro = true; }
+  else if (st.estado === 'ok' && atraso !== null && atraso > 1.0) { txt = `Arduino sem amostras há ${br(atraso, 1)} s`; cor = C.laranja; erro = true; }
+  else [txt, cor] = {ok: ['Arduino conectado · ' + st.porta, C.verde], sim: ['Modo simulação · sem Arduino', C.laranja],
+        caiu: ['Arduino DESCONECTADO · reconectando', C.verm], ocupada: ['Porta em uso por outro processo', C.verm],
+        procurando: ['Procurando o Arduino…', C.laranja]}[st.estado] || ['—', C.terc];
+  if (st.estado === 'caiu' || st.estado === 'ocupada') erro = true;
+  p.querySelector('span').textContent = txt; p.querySelector('i').style.background = cor; p.classList.toggle('erro', erro);
+}
+function atualizaPainel() {
+  const st = E.st, y = E.y;
+  atualizaPilula();
+  const est = {ok: ['conectado', C.verde], sim: ['simulação', C.laranja], caiu: ['desconectado', C.verm],
+               ocupada: ['porta ocupada', C.verm], procurando: ['procurando…', C.laranja]}[st.estado] || ['—', C.muted];
+  $('cEst').textContent = est[0]; $('cEst').style.color = est[1];
+  $('cPorta').textContent = st.estado === 'sim' ? 'virtual' : (st.porta || '—');
+  $('lbApi').textContent = IOT ? 'Dados do PC (MQTT)' : 'API tempo real (SSE)';
+  $('cTaxa').textContent = st.taxa ? `${br(st.taxa[1], 1)} / ${br(st.taxa[0], 1)} /s` : '—';
+  const atraso = st.t_ultima ? E.srvT - st.t_ultima : null;
+  $('cUlt').textContent = st.t_ultima ? hora(st.t_ultima).slice(0, 12) : '—';
+  $('cUlt').style.color = atraso !== null && atraso > 1 ? C.laranja : '';
+  $('cErr').textContent = `${st.perdidas ?? 0} / ${st.invalidas ?? 0}`;
+  $('cErr').style.color = (st.perdidas || st.invalidas) ? C.laranja : '';
+  $('cApi').textContent = E.sse === 'ok' ? (IOT ? 'recebendo' : 'conectada') : 'offline'; $('cApi').style.color = E.sse === 'ok' ? C.verde : C.verm;
+  const io = st.iot || {};
+  if (IOT) {
+    $('cIot').textContent = E.brk === 'ok' ? 'via broker' : (E.brk === 'erro' ? 'sem broker' : 'conectando'); $('cIot').style.color = E.brk === 'ok' ? C.verde : C.laranja;
+    $('iotTxt').innerHTML = `Você está na <b>página hospedada</b>. Os dados chegam do PC do laboratório pelo broker MQTT e a chave S volta pelo mesmo caminho.<br><span class="mono" style="font-size:11px">${BROKER.replace('wss://', '')} · ${TOPICO}</span>`;
+    $('iotLink').textContent = '';
+  } else {
+    const cor = {online: C.verde, conectando: C.laranja, reconectando: C.laranja}[io.estado] || C.verm;
+    $('cIot').textContent = io.estado || '—'; $('cIot').style.color = cor;
+    $('iotTxt').innerHTML = io.estado === 'online' ? `Publicando no broker <span class="mono">${io.broker}</span>, tópico <span class="mono">${io.topico}</span> · ${io.enviados} quadros · ${io.comandos} comandos recebidos. Abra no celular:`
+      : (io.estado === 'sem paho-mqtt' ? 'Instale com: py -m pip install paho-mqtt' : `Broker ${io.broker || ''}: ${io.estado || '—'}. Sem internet o modo local continua funcionando.`);
+    $('iotLink').textContent = io.site || ''; $('iotLink').href = io.site || '#';
+  }
+  $('cMsg').textContent = st.msg ? '⚠ ' + st.msg : (st.firmware ? 'Firmware: ' + st.firmware : '');
+  $('cMsg').style.color = st.msg ? C.laranja : '';
+  if (st.estado === 'sim') {
+    $('swAuto').classList.toggle('on', st.sim_pot == null);
+    $('vSimPot').textContent = st.sim_pot == null ? 'auto' : st.sim_pot;
+    if (st.sim_pot != null && document.activeElement !== $('rgSimPot')) $('rgSimPot').value = st.sim_pot;
+  }
+  if (!y) return;
+  const S = E.s;
+  $('tCanal').textContent = S ? 'I1' : 'I0'; $('tCanalS').textContent = S ? 'pot. A0' : 'botão D2';
+  $('tY').textContent = y.valor; $('tYS').textContent = '0x' + y.valor.toString(16).toUpperCase().padStart(3, '0');
+  if (S) { $('tGrdT').textContent = 'TENSÃO'; $('tGrd').textContent = br(y.v, 2) + ' V'; $('tGrd').style.color = C.verde; $('tGrdS').textContent = 'estimada'; }
+  else { $('tGrdT').textContent = 'NÍVEL'; $('tGrd').textContent = y.valor; $('tGrd').style.color = y.valor ? C.verde : C.terc;
+         $('tGrdS').textContent = y.valor ? 'pressionado' : 'solto'; }
+  $('kBin').textContent = y.bin.replace(/(\d)(?=(\d{4})+$)/g, '$1 ');
+  $('kTms').textContent = tms(y.t_ms); $('kTpc').textContent = hora(y.t_pc);
+}
+
+// ============================== canvas ==============================
+function prepara(cv) {
+  const r = cv.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  const w = Math.max(20, r.width), h = Math.max(20, r.height);
+  if (cv.width !== Math.round(w * d) || cv.height !== Math.round(h * d)) { cv.width = Math.round(w * d); cv.height = Math.round(h * d); }
+  const c = cv.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); c.clearRect(0, 0, w, h);
+  c.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--mono'); return [c, w, h];
+}
+function suaviza(buf) {
+  const out = new Array(buf.length);
+  if (E.filtro === 'ema') { let y = null; for (let i = 0; i < buf.length; i++) { const x = buf[i][1]; y = y === null ? x : E.alfa * x + (1 - E.alfa) * y; out[i] = y; } }
+  else { let soma = 0; for (let i = 0; i < buf.length; i++) { soma += buf[i][1]; if (i >= E.N) soma -= buf[i - E.N][1]; out[i] = soma / Math.min(i + 1, E.N); } }
+  return out;
+}
+function rrect(c, x, y, w, h, r) { c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, r) : c.rect(x, y, w, h); }
+
+function desenhaPot() {
+  const [c, w, h] = prepara($('cvPot'));
+  const buf = B[1];
+  const pl = 58, pr = 70, pt = 10, pb = 26, W = w - pl - pr, H = h - pt - pb;
+  const tEnd = buf.length ? buf[buf.length - 1][0] : 0, J = E.janela * 1000, t0 = tEnd - J;
+  const emV = E.eixo === 'v', ymax = emV ? vref() : 1023;
+  const conv = v => emV ? v * vref() / 1023 : v;
+  const X = t => pl + (t - t0) / J * W, Y = v => pt + (1 - conv(v) / ymax) * H;
+  c.fillStyle = C.card2; rrect(c, pl, pt, W, H, 10); c.fill();
+  c.strokeStyle = C.sep; c.lineWidth = 1; c.fillStyle = C.muted; c.textAlign = 'right'; c.textBaseline = 'middle';
+  for (let k = 0; k <= 5; k++) {
+    const val = ymax * k / 5, yy = pt + (1 - k / 5) * H;
+    c.beginPath(); c.moveTo(pl, yy); c.lineTo(pl + W, yy); c.stroke();
+    c.fillText(emV ? br(val, 1) + ' V' : Math.round(val), pl - 8, yy);
+  }
+  c.textAlign = 'center'; c.textBaseline = 'top';
+  const passo = E.janela <= 10 ? 2 : 5;
+  for (let s = 0; s <= E.janela; s += passo) { const xx = pl + W - s / E.janela * W; c.fillText(s ? `−${s} s` : 'agora', xx, pt + H + 7);
+    c.beginPath(); c.setLineDash([2, 4]); c.moveTo(xx, pt); c.lineTo(xx, pt + H); c.stroke(); c.setLineDash([]); }
+  if (!buf.length) return;
+  let i0 = 0; while (i0 < buf.length - 1 && buf[i0][0] < t0) i0++;
+  const sm = suaviza(buf);
+  c.save(); c.beginPath(); c.rect(pl, pt, W, H); c.clip();
+  // bruto
+  c.strokeStyle = mix(C.card2, C.muted, .55); c.lineWidth = 1; c.beginPath();
+  for (let i = i0; i < buf.length; i++) { const x = X(buf[i][0]), yy = Y(buf[i][1]); i === i0 ? c.moveTo(x, yy) : c.lineTo(x, yy); }
+  c.stroke();
+  c.fillStyle = mix(C.card2, C.muted, .7);
+  for (let i = i0; i < buf.length; i++) c.fillRect(X(buf[i][0]) - 1, Y(buf[i][1]) - 1, 2, 2);
+  // suavizado (com preenchimento)
+  const g = c.createLinearGradient(0, pt, 0, pt + H); g.addColorStop(0, mix(C.card2, C.azul, .28)); g.addColorStop(1, mix(C.card2, C.azul, 0));
+  c.beginPath();
+  for (let i = i0; i < buf.length; i++) { const x = X(buf[i][0]), yy = Y(sm[i]); i === i0 ? c.moveTo(x, yy) : c.lineTo(x, yy); }
+  c.lineTo(X(buf[buf.length - 1][0]), pt + H); c.lineTo(X(buf[i0][0]), pt + H); c.closePath(); c.fillStyle = g; c.fill();
+  c.beginPath();
+  for (let i = i0; i < buf.length; i++) { const x = X(buf[i][0]), yy = Y(sm[i]); i === i0 ? c.moveTo(x, yy) : c.lineTo(x, yy); }
+  c.strokeStyle = C.azul; c.lineWidth = 2.6; c.lineJoin = 'round'; c.stroke();
+  c.restore();
+  const ys = Y(sm[sm.length - 1]), xs = X(tEnd);
+  c.beginPath(); c.arc(xs, ys, 5, 0, 7); c.fillStyle = C.azul; c.fill(); c.strokeStyle = C.card; c.lineWidth = 2; c.stroke();
+  c.fillStyle = C.azul; c.textAlign = 'left'; c.textBaseline = 'middle'; c.font = '700 12px ' + getComputedStyle(document.body).getPropertyValue('--mono');
+  c.fillText(emV ? br(conv(sm[sm.length - 1]), 2) + ' V' : Math.round(sm[sm.length - 1]), xs + 9, Math.min(Math.max(ys, pt + 8), pt + H - 8));
+}
+function desenhaBot() {
+  const [c, w, h] = prepara($('cvBot'));
+  const buf = B[0], pl = 58, pr = 20, pt = 8, pb = 24, W = w - pl - pr, H = h - pt - pb;
+  c.fillStyle = C.card2; rrect(c, pl, pt, W, H, 10); c.fill();
+  c.fillStyle = C.muted; c.textAlign = 'right'; c.textBaseline = 'middle';
+  c.fillText('1', pl - 10, pt + 14); c.fillText('0', pl - 10, pt + H - 14);
+  c.textAlign = 'center'; c.textBaseline = 'top';
+  for (let s = 0; s <= 10; s += 2) c.fillText(s ? `−${s} s` : 'agora', pl + W - s / 10 * W, pt + H + 6);
+  if (!buf.length) return;
+  const tEnd = buf[buf.length - 1][0], t0 = tEnd - 10000, X = t => pl + Math.max(0, (t - t0) / 10000) * W;
+  const yh = pt + 14, yl = pt + H - 14;
+  c.beginPath(); let prev = null;
+  for (const [t, v] of buf) { if (t < t0 - 200) continue; const x = X(t), yy = v ? yh : yl;
+    if (prev === null) c.moveTo(x, yy); else { c.lineTo(x, prev); c.lineTo(x, yy); } prev = yy; }
+  c.lineTo(X(tEnd), prev);
+  c.strokeStyle = C.verde; c.lineWidth = 2.4; c.stroke();
+  c.lineTo(X(tEnd), yl); c.lineTo(X(Math.max(t0, buf[0][0])), yl); c.closePath();
+  c.fillStyle = mix(C.card2, C.verde, .18); c.fill();
+}
+
+// ============================== pagina: MONITOR ==============================
+function pgMonitor() {
+  const y = E.y, S = E.s, st = E.st;
+  const tem = y && y.t_ms != null;
+  $('monBot').style.display = tem && S === 0 ? 'flex' : 'none';
+  $('monPot').style.display = tem && S === 1 ? 'flex' : 'none';
+  $('monVazio').style.display = tem ? 'none' : 'flex';
+  $('monTit').textContent = S ? 'S = 1 · canal I1 · Potenciômetro (A0)' : 'S = 0 · canal I0 · Botão (D2)';
+  $('monSub').textContent = tem ? `última amostra ${hora(y.t_pc)} · aquisição no Arduino t = ${tms(y.t_ms)}` : '—';
+  const bd = $('monBadge'); const atraso = st.t_ultima ? E.srvT - st.t_ultima : null;
+  if (E.sse !== 'ok') { bd.textContent = IOT ? 'sem dados do PC' : 'API offline'; bd.style.background = mix(C.card, C.verm, .18); bd.style.color = C.verm; }
+  else if (!tem || (atraso !== null && atraso > 1)) { bd.textContent = 'sem amostras'; bd.style.background = mix(C.card, C.laranja, .18); bd.style.color = C.laranja; }
+  else { bd.textContent = st.estado === 'sim' ? '● simulação · ao vivo' : '● ao vivo'; bd.style.background = mix(C.card, C.verde, .18); bd.style.color = C.verde; }
+  if (!tem) {
+    $('monVazioS').textContent = {sim: 'iniciando a simulação…', procurando: 'procurando o Arduino (até ~3 s por porta)…',
+      caiu: 'Arduino desconectado: verifique o cabo USB', ocupada: 'a porta serial está aberta em outro programa (Monitor Serial?)'}[st.estado] || '';
+    return;
+  }
+  if (S === 0) {
+    const on = y.valor === 1;
+    $('ind').classList.toggle('on', on); $('ind').firstChild.textContent = on ? 'PRESSIONADO' : 'D2';
+    $('botTxt').textContent = on ? 'PRESSIONADO' : 'SOLTO'; $('botTxt').style.color = on ? C.verde : C.muted;
+    $('bNivel').textContent = y.valor; $('bNivel').style.color = on ? C.verde : C.terc;
+    $('bCont').textContent = E.acion;
+    $('bPino').textContent = on ? '0' : '1'; $('bPinoS').textContent = on ? 'LOW · ligado ao GND' : 'HIGH · pull-up';
+    $('bMud').textContent = st.t_mud_botao ? `Última mudança: ${hora(st.t_mud_botao)} (há ${br(E.srvT - st.t_mud_botao, 1)} s)` : 'Nenhuma mudança ainda.';
+    desenhaBot();
+  } else {
+    $('pCod').textContent = y.valor; $('pHex').textContent = `0x${y.valor.toString(16).toUpperCase().padStart(3, '0')} · ${y.valor} / 1023`;
+    $('pV').textContent = br(y.v, 3) + ' V';
+    for (let k = 0; k < 10; k++) { const b = (y.valor >> k) & 1, d = $('mb' + k); d.classList.toggle('on', !!b); d.children[1].textContent = b; }
+    const buf = B[1];
+    if (buf.length) { const sm = suaviza(buf), v = sm[sm.length - 1];
+      $('pSuav').textContent = br(v * vref() / 1023, 3) + ' V'; $('pSuavS').textContent = `código ${br(v, 1)} · só no gráfico`; }
+    $('legTaxa').textContent = `${buf.length} amostras na memória · ${br(st.taxa ? st.taxa[1] : 0, 1)} amostras/s`;
+    desenhaPot();
+  }
+}
+
+// ============================== desenho em SVG ==============================
+function th() {
+  if (E.tema === 'CircuitMaker') return {bg: '#f6f3ea', body: '#ffffff', on: '#ffd9d9', edge: '#1a1a1a', txt: '#111111', dim: '#777777', hi: '#e01b1b', lo: '#1f4fd0', x: '#d08a00'};
+  return {bg: C.card, body: C.card2, on: mix(C.card, C.verde, .22), edge: mix(C.txt, C.card, .12), txt: C.txt, dim: C.muted, hi: C.verde, lo: C.azul, x: C.laranja};
+}
+const SV = {
+  fio: (pts, cor, w = 3, extra = '') => `<polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="${cor}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round" ${extra}/>`,
+  txt: (x, y, t, cor, tam = 13, peso = 400, anc = 'middle', extra = '') => `<text x="${x}" y="${y}" fill="${cor}" font-size="${tam}" font-weight="${peso}" text-anchor="${anc}" dominant-baseline="central" ${extra}>${t}</text>`,
+  ponto: (x, y, cor, r = 5) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${cor}"/>`,
+  ret: (x, y, w, h, fill, stroke, sw = 2, r = 8, extra = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" ${extra}/>`,
+  AND: (x, y, w, h, f, e) => `<path d="M${x} ${y}H${x + w - h / 2}A${h / 2} ${h / 2} 0 0 1 ${x + w - h / 2} ${y + h}H${x}Z" fill="${f}" stroke="${e}" stroke-width="2.4"/>`,
+  OR: (x, y, w, h, f, e) => `<path d="M${x} ${y}Q${x + w * .6} ${y} ${x + w} ${y + h / 2}Q${x + w * .6} ${y + h} ${x} ${y + h}Q${x + w * .3} ${y + h / 2} ${x} ${y}Z" fill="${f}" stroke="${e}" stroke-width="2.4"/>`,
+  NOT: (x, y, w, h, f, e) => `<path d="M${x} ${y}L${x + w} ${y + h / 2}L${x} ${y + h}Z" fill="${f}" stroke="${e}" stroke-width="2.4"/><circle cx="${x + w + 6}" cy="${y + h / 2}" r="6" fill="${f}" stroke="${e}" stroke-width="2.2"/>`
+};
+function mux2(s, i0, i1) { const ns = 1 - s, a0 = ns & i0, a1 = s & i1; return {s, ns, i0, i1, a0, a1, y: a0 | a1}; }
+function entradas() { return [E.ent[0] ? E.ent[0][0] : 0, E.ent[1] ? E.ent[1][0] : 0]; }
+
+// ============================== pagina: CIRCUITO ==============================
+function pgCircuito() {
+  const T = th(), [I0, I1] = entradas(), S = E.s, k = E.bit;
+  const g = mux2(S, (I0 >> k) & 1, (I1 >> k) & 1), cor = b => b ? T.hi : T.lo;
+  let o = `<svg viewBox="0 0 1040 640" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="background:${T.bg};border-radius:12px">`;
+  // fios (desenhados antes das portas)
+  o += SV.fio([[200, 132], [520, 132]], cor(g.i0));
+  o += SV.fio([[200, 348], [520, 348]], cor(g.i1));
+  o += SV.fio([[200, 500], [470, 500], [470, 312], [520, 312]], cor(S));
+  o += SV.fio([[270, 500], [270, 168], [380, 168]], cor(S));
+  o += SV.fio([[442, 168], [520, 168]], cor(g.ns));
+  o += SV.fio([[610, 150], [680, 150], [680, 206], [760, 206]], cor(g.a0));
+  o += SV.fio([[610, 330], [680, 330], [680, 254], [760, 254]], cor(g.a1));
+  o += SV.fio([[838, 230], [880, 230]], cor(g.y));
+  o += SV.ponto(270, 500, cor(S), 6);
+  // portas
+  o += SV.NOT(380, 148, 50, 40, g.ns ? T.on : T.body, T.edge) + SV.txt(405, 205, 'NOT', T.dim, 11, 700);
+  o += SV.AND(520, 110, 90, 80, g.a0 ? T.on : T.body, T.edge) + SV.txt(556, 150, 'AND', T.dim, 11, 700);
+  o += SV.AND(520, 290, 90, 80, g.a1 ? T.on : T.body, T.edge) + SV.txt(556, 330, 'AND', T.dim, 11, 700);
+  o += SV.OR(748, 180, 90, 100, g.y ? T.on : T.body, T.edge) + SV.txt(790, 230, 'OR', T.dim, 11, 700);
+  // rotulos dos sinais
+  o += SV.txt(452, 156, `S̄=${g.ns}`, cor(g.ns), 12, 700, 'start');
+  o += SV.txt(622, 136, `S̄·I0=${g.a0}`, cor(g.a0), 12, 700, 'start');
+  o += SV.txt(622, 316, `S·I1=${g.a1}`, cor(g.a1), 12, 700, 'start');
+  o += SV.txt(482, 296, `S=${S}`, cor(S), 12, 700, 'start');
+  // entradas
+  const caixa = (y, nome, sub, v, extra = '') => SV.ret(40, y - 32, 160, 64, v ? T.on : T.body, T.edge, 2.4, 10, extra) +
+    SV.txt(56, y - 10, nome, T.txt, 14, 700, 'start', extra) + SV.txt(56, y + 12, sub, T.dim, 11, 400, 'start', extra) +
+    SV.txt(184, y, v, cor(v), 24, 700, 'end', extra);
+  o += caixa(132, `I0 · bit ${k}`, I0 ? 'botão D2 = 1' : 'botão D2 = 0', g.i0);
+  o += caixa(348, `I1 · bit ${k}`, `A0 = ${I1}`, g.i1);
+  o += `<g class="clic" id="svgS">${caixa(500, 'S (seleção)', 'clique para alternar', S, '')}</g>`;
+  // saida
+  o += SV.ret(880, 194, 130, 72, g.y ? T.on : T.body, T.edge, 2.4, 10);
+  o += SV.txt(896, 216, `Y · bit ${k}`, T.txt, 14, 700, 'start') + SV.txt(994, 238, g.y, cor(g.y), 26, 700, 'end');
+  o += SV.txt(896, 246, S ? '= I1' : '= I0', T.dim, 11, 400, 'start');
+  o += SV.txt(520, 40, `Y = S̄·I0 + S·I1 = ${g.ns}·${g.i0} + ${g.s}·${g.i1} = ${g.a0} + ${g.a1} = ${g.y}`, T.txt, 16, 700);
+  o += SV.txt(520, 66, `bit ${k} do barramento · com S = ${S} a saída copia ${S ? 'I1 (potenciômetro)' : 'I0 (botão)'}`, T.dim, 12);
+  // barramento de 10 bits
+  const Y = mux2Bus(S, I0, I1);
+  o += SV.txt(40, 556, 'BARRAMENTO · 10 MUX 2:1 com o mesmo S (clique num bit para ver as portas)', T.dim, 11, 700, 'start');
+  for (let j = 0; j < 10; j++) {
+    const b = 9 - j, x = 40 + j * 97, gb = mux2(S, (I0 >> b) & 1, (I1 >> b) & 1), sel = b === k;
+    o += `<g class="clic" data-bit="${b}">` + SV.ret(x, 570, 88, 58, sel ? mix(T.bg, T.x, .14) : T.body, sel ? T.x : T.edge, sel ? 2.6 : 1.2, 9);
+    o += SV.txt(x + 44, 582, `D${b}`, T.txt, 11, 700);
+    o += SV.ponto(x + 18, 602, cor(gb.i0), 5) + SV.ponto(x + 44, 602, cor(gb.i1), 5) + SV.ponto(x + 70, 602, cor(gb.y), 6);
+    o += SV.txt(x + 18, 618, 'I0', T.dim, 9) + SV.txt(x + 44, 618, 'I1', T.dim, 9) + SV.txt(x + 70, 618, 'Y', T.dim, 9, 700) + '</g>';
+  }
+  o += SV.txt(1010, 556, `Y = ${bin10(Y)} = ${Y}`, T.txt, 12, 700, 'end');
+  // legenda
+  o += SV.ponto(52, 92, T.hi, 6) + SV.txt(64, 92, 'nível 1', T.txt, 11, 400, 'start');
+  o += SV.ponto(132, 92, T.lo, 6) + SV.txt(144, 92, 'nível 0', T.txt, 11, 400, 'start');
+  o += '</svg>';
+  $('svgCirc').innerHTML = o;
+  $('svgCirc').querySelector('#svgS').onclick = () => setS(1 - E.s);
+  $('svgCirc').querySelectorAll('[data-bit]').forEach(n => n.onclick = () => { E.bit = +n.dataset.bit; guarda.set('bit', E.bit); E.sujo = true; });
+}
+function mux2Bus(S, I0, I1) { let y = 0; for (let k = 0; k < 10; k++) y |= mux2(S, (I0 >> k) & 1, (I1 >> k) & 1).y << k; return y; }
+
+// ============================== pagina: TABELA ==============================
+function pgTabela() {
+  const [I0, I1] = entradas(), S = E.s, k = E.bit;
+  const i0 = (I0 >> k) & 1, i1 = (I1 >> k) & 1, atual = S * 4 + i0 * 2 + i1;
+  const cl = v => v ? 'um' : 'zero';
+  let t = '<table class="t"><tr><th>linha</th><th>S</th><th>I0</th><th>I1</th><th>S̄·I0</th><th>S·I1</th><th>Y</th></tr>';
+  for (let m = 0; m < 8; m++) {
+    const g = mux2(m >> 2 & 1, m >> 1 & 1, m & 1);
+    t += `<tr class="${m === atual ? 'hl' : ''}"><td class="mut">m${m}</td><td>${g.s}</td><td>${g.i0}</td><td>${g.i1}</td>` +
+         `<td class="${cl(g.a0)}">${g.a0}</td><td class="${cl(g.a1)}">${g.a1}</td><td class="${cl(g.y)}" style="font-weight:800">${g.y}</td></tr>`;
+  }
+  t += '</table>';
+  // mapa de Karnaugh: linhas S, colunas I0I1 em codigo Gray
+  const gray = [[0, 0], [0, 1], [1, 1], [1, 0]], cs = 66;
+  let km = `<div style="position:relative;width:${60 + 4 * cs}px;height:${34 + 2 * cs}px">`;
+  km += `<div class="mut mono" style="position:absolute;left:0;top:6px;font-size:11px">S \\ I0 I1</div>`;
+  gray.forEach((g, c) => km += `<div class="mono" style="position:absolute;left:${60 + c * cs}px;width:${cs}px;top:6px;text-align:center;font-weight:700">${g.join('')}</div>`);
+  for (let r = 0; r < 2; r++) {
+    km += `<div class="mono" style="position:absolute;left:24px;top:${34 + r * cs + cs / 2 - 9}px;font-weight:700">${r}</div>`;
+    gray.forEach((g, c) => {
+      const y = mux2(r, g[0], g[1]).y, ag = r === S && g[0] === i0 && g[1] === i1;
+      km += `<div style="position:absolute;left:${60 + c * cs}px;top:${34 + r * cs}px;width:${cs}px;height:${cs}px;border:1px solid var(--sep);` +
+            `background:${y ? 'color-mix(in srgb,var(--verde) 16%,var(--card))' : 'var(--card)'};display:flex;align-items:center;justify-content:center;` +
+            `font:700 22px var(--mono);color:${y ? 'var(--verde)' : 'var(--terc)'};${ag ? 'box-shadow:inset 0 0 0 3px var(--laranja)' : ''}">${y}` +
+            `<span style="position:absolute;left:4px;top:2px;font:10px var(--mono);color:var(--muted)">m${r * 4 + g[0] * 2 + g[1]}</span></div>`;
+    });
+  }
+  const grupo = (r, c0, c1, cor, ins) => `<div style="position:absolute;left:${60 + c0 * cs + ins}px;top:${34 + r * cs + ins}px;width:${(c1 - c0 + 1) * cs - 2 * ins}px;height:${cs - 2 * ins}px;border:2.5px dashed ${cor};border-radius:12px;pointer-events:none"></div>`;
+  km += grupo(0, 2, 3, 'var(--azul)', 6) + grupo(1, 1, 2, 'var(--verm)', 6);
+  km += `<div style="position:absolute;left:${60 + 2 * cs + 14}px;top:${34 + 14}px;width:${cs - 28}px;height:${2 * cs - 28}px;border:2px dotted var(--roxo);border-radius:10px;pointer-events:none"></div></div>`;
+  $('tabBox').innerHTML = `
+    <div class="pg-cab"><div><h2>Tabela-verdade e mapa de Karnaugh</h2>
+      <div class="mut" style="font-size:13px">linha destacada = combinação atual no bit ${k} do barramento (mude o bit na aba Circuito)</div></div>
+      <div class="badge" style="background:${mix(C.card, C.azul, .14)};color:${C.azul}">agora: S=${S} · I0=${i0} · I1=${i1} → Y=${mux2(S, i0, i1).y}</div></div>
+    <div class="grade2">
+      <div class="bloco"><h3>MUX 2:1 · 3 entradas, 1 saída</h3>${t}</div>
+      <div class="bloco"><h3>Mapa de Karnaugh de Y(S, I0, I1)</h3>${km}
+        <div class="eq" style="margin-top:12px"><span style="color:var(--azul)">■ S̄·I0</span> (linha S=0, I0=1) &nbsp; <span style="color:var(--verm)">■ S·I1</span> (linha S=1, I1=1)</div>
+        <div class="eq"><b>Y = S̄·I0 + S·I1</b> &nbsp;=&nbsp; Σm(2, 3, 5, 7)</div>
+        <div class="nota"><span style="color:var(--roxo)">┊ I0·I1</span> é o termo de consenso (redundante): cobre m3 e m7, já cobertos. Ele só serve para eliminar o “glitch” na troca de S quando I0 = I1 = 1.</div>
+      </div>
+      <div class="bloco"><h3>Leitura do circuito</h3>
+        <div class="eq">S = 0 → S̄ = 1 → Y = 1·I0 + 0·I1 = I0<br>S = 1 → S̄ = 0 → Y = 0·I0 + 1·I1 = I1<br>Forma compacta: Y = I<sub>S</sub></div>
+        <div class="nota">Portas por bit: 1 NOT + 2 AND + 1 OR (74LS04, 74LS08, 74LS32). Para 10 bits: 10 MUX com o mesmo S, um único NOT basta (CI pronto: 74LS157, 4 MUX 2:1).</div></div>
+      <div class="bloco"><h3>Como o Python aplica</h3>
+        <div class="eq" style="font-size:13px">def mux2(s, i0, i1):<br>&nbsp;&nbsp;ns = NOT(s)<br>&nbsp;&nbsp;a0 = AND(ns, i0)<br>&nbsp;&nbsp;a1 = AND(s, i1)<br>&nbsp;&nbsp;return OR(a0, a1)</div>
+        <div class="nota">O servidor aplica mux2 aos 10 bits de cada amostra (I0 = botão em D0, I1 = código do ADC) e manda ao navegador só a saída Y. Teste: python "Lab 6.py" --test</div></div>
+    </div>`;
+}
+
+// ============================== pagina: CONVERSAO A/D ==============================
+function pgADC() {
+  const box = $('adcBox');
+  if (E.s !== 1 || !E.y || E.y.t_ms == null) {
+    box.innerHTML = `<div class="vazio"><b>Canal ativo: botão (S = 0)</b><span>A conversão A/D é a representação do canal I1.<br>Mude S para 1 para ver o potenciômetro.</span>
+      <button class="bt" style="--c:var(--azul)" onclick="setS(1)">Selecionar S = 1</button></div>`;
+    return;
+  }
+  const cod = E.y.valor, VR = vref(), v = cod * VR / 1023, lsb = VR / 1024;
+  const bits = bin10(cod);
+  const regBits = (lista) => lista.map(b => b === '-' ? '<span class="x">–</span>' : `<span class="${bits[9 - b] === '1' ? 'um' : ''}" title="D${b}">${bits[9 - b]}</span>`).join('');
+  const reg = (nome, lista) => `<div class="reg"><em>${nome}</em>${regBits(lista)}</div>`;
+  const D = (a, b) => Array.from({length: a - b + 1}, (_, i) => a - i);
+  // aproximacoes sucessivas
+  let r = 0, sar = '<table class="t" style="font-size:12px"><tr><th>passo</th><th>testa</th><th>limiar (V)</th><th>VIN ≥ limiar?</th><th>resultado</th></tr>';
+  for (let k = 9; k >= 0; k--) {
+    const teste = r | (1 << k), lim = teste * VR / 1024, mant = cod >= teste;
+    if (mant) r = teste;
+    sar += `<tr><td class="mut">${10 - k}</td><td>D${k}</td><td>${br(lim, 3)}</td><td class="${mant ? 'um' : 'zero'}">${mant ? 'sim → 1' : 'não → 0'}</td><td>${bin10(r).slice(0, 10 - k)}<span class="mut">${'·'.repeat(k)}</span></td></tr>`;
+  }
+  sar += '</table>';
+  // escada de quantizacao (zoom em torno do codigo atual)
+  const n0 = Math.max(0, Math.min(1023 - 12, cod - 6)), n1 = n0 + 12, Wd = 420, Hd = 230, pl = 52, pb = 30;
+  const vx0 = n0 * VR / 1024, vx1 = (n1 + 1) * VR / 1024;
+  const X = vv => pl + (vv - vx0) / (vx1 - vx0) * (Wd - pl - 10), Yc = n => 10 + (1 - (n - n0 + .5) / 13.5) * (Hd - pb - 10);
+  let esc = `<svg viewBox="0 0 ${Wd} ${Hd}" width="100%" style="max-width:520px">`;
+  esc += `<polyline fill="none" stroke="${C.terc}" stroke-dasharray="4 4" stroke-width="1.4" points="${X(vx0)},${Yc(n0 - .5)} ${X(vx1)},${Yc(n1 + .5)}"/>`;
+  let pts = [];
+  for (let n = n0; n <= n1; n++) { pts.push([X(n * VR / 1024), Yc(n)], [X((n + 1) * VR / 1024), Yc(n)]); }
+  esc += SV.fio(pts, C.azul, 2.4);
+  const yc = Yc(cod), xc = X((cod + .5) * VR / 1024);
+  esc += `<rect x="${X(cod * VR / 1024)}" y="10" width="${X((cod + 1) * VR / 1024) - X(cod * VR / 1024)}" height="${Hd - pb - 10}" fill="${mix(C.card, C.laranja, .16)}"/>`;
+  esc += SV.ponto(xc, yc, C.laranja, 6);
+  for (let n = n0; n <= n1; n += 3) esc += SV.txt(pl - 6, Yc(n), n, C.muted, 10, 400, 'end');
+  esc += SV.txt(X(vx0), Hd - 12, br(vx0, 3) + ' V', C.muted, 10, 400, 'start') + SV.txt(X(vx1), Hd - 12, br(vx1, 3) + ' V', C.muted, 10, 400, 'end');
+  esc += SV.txt((pl + Wd) / 2, Hd - 12, 'tensão de entrada VIN →', C.muted, 10) + '</svg>';
+  box.innerHTML = `
+    <div class="pg-cab"><div><h2>Conversão A/D · código de 10 bits</h2>
+      <div class="mut" style="font-size:13px">valor lido por analogRead(A0) no ATmega328P · amostra de ${hora(E.y.t_pc)} · t Arduino ${tms(E.y.t_ms)}</div></div>
+      <div class="badge" style="background:${mix(C.card, C.verde, .16)};color:${C.verde}">${cod} → ${br(v, 3)} V</div></div>
+    <div class="bits">${Array.from({length: 10}, (_, i) => 9 - i).map(k => `<div class="bit ${(cod >> k) & 1 ? 'on' : ''}"><small>D${k}</small><b>${(cod >> k) & 1}</b><small>2^${k} = ${1 << k}</small></div>`).join('')}</div>
+    <div class="grade2">
+      <div class="bloco"><h3>Código → tensão</h3>
+        <div class="eq">código (decimal) = <b>${cod}</b><br>código (binário) = <b>${bits}</b>₂ &nbsp;(D9…D0)<br>
+        código (hex) = <b>0x${cod.toString(16).toUpperCase().padStart(3, '0')}</b><br>
+        V ≈ código × VREF / 1023 = ${cod} × ${br(VR, 2)} / 1023 = <b style="color:var(--verde)">${br(v, 4)} V</b><br>
+        1 LSB = VREF / 1024 ≈ ${br(lsb * 1000, 2)} mV<br>erro de quantização = ±½ LSB ≈ ±${br(lsb * 500, 2)} mV</div>
+        <div class="nota">Estimativa didática do roteiro. O datasheet define ADC = VIN·1024/VREF (diferença &lt; 1 LSB). A referência real é o AVCC da USB (≈ 4,8 a 5,1 V): esse desvio de VREF, o ruído e a quantização entram no erro da tensão mostrada.</div></div>
+      <div class="bloco"><h3>Escada de quantização (zoom no código atual)</h3>${esc}
+        <div class="nota">Cada degrau = 1 código. Toda tensão dentro da faixa laranja vira o mesmo código ${cod}.</div></div>
+      <div class="bloco"><h3>Aproximações sucessivas (SAR) · ilustração</h3>${sar}
+        <div class="nota">O ADC do ATmega328P é de aproximações sucessivas: testa um bit por vez, de D9 a D0, comparando VIN com a saída de um DAC interno (13 ciclos de clock do ADC por conversão). A tabela refaz esse processo para o código lido.</div></div>
+      <div class="bloco"><h3>Registradores ADCH : ADCL · onde estes 10 bits ficariam</h3>
+        <div style="display:flex;flex-direction:column;gap:6px;margin:4px 0 10px">
+          <div class="mut" style="font-size:12px;font-weight:700">ADLAR = 0 (alinhado à direita, padrão)</div>
+          ${reg('ADCH', ['-', '-', '-', '-', '-', '-', 9, 8])}${reg('ADCL', D(7, 0))}
+          <div class="mut" style="font-size:12px;font-weight:700;margin-top:6px">ADLAR = 1 (alinhado à esquerda)</div>
+          ${reg('ADCH', D(9, 2))}${reg('ADCL', [1, 0, '-', '-', '-', '-', '-', '-'])}
+        </div>
+        <div class="nota"><b>Ilustração didática.</b> O firmware lê com analogRead(), que monta o resultado a partir de ADCL e ADCH (ADCL primeiro). Os bits acima são o código ADC de 10 bits recebido; esta tela não lê ADCL/ADCH diretamente.</div></div>
+    </div>`;
+}
+
+// ============================== pagina: FIACAO ==============================
+function pgFiacao() {
+  const T = th(), st = E.st, [b, cod] = entradas(), S = E.s, v = cod * vref() / 1023;
+  const nivelD2 = b ? 0 : 1, sim = st.estado === 'sim', cor = x => x ? T.hi : T.lo;
+  const corA0 = mix(T.lo, T.hi, cod / 1023), apagado = (on) => on ? '' : 'opacity="0.45"';
+  let o = `<svg viewBox="0 0 1180 600" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="background:${T.bg};border-radius:12px">`;
+  // Arduino
+  o += SV.ret(420, 70, 330, 460, E.tema === 'iOS' ? '#0B7F86' : '#ffffff', T.edge, 2.6, 16);
+  const cA = E.tema === 'iOS' ? '#ffffff' : T.txt;
+  o += SV.txt(585, 280, 'ARDUINO UNO', cA, 22, 700) + SV.txt(585, 306, 'ATmega328P · ADC 10 bits · AVCC = 5 V', cA, 12);
+  o += SV.txt(585, 330, st.firmware ? st.firmware.slice(1) : 'firmware Lab6_firmware.ino', cA, 11, 400, 'middle', 'opacity="0.8"');
+  // conector digital (topo) e analogico/alimentacao (base)
+  o += SV.ret(470, 80, 230, 26, '#151517', '#151517', 1, 4) + SV.ret(470, 494, 230, 26, '#151517', '#151517', 1, 4);
+  const pinoTop = (x, nome) => SV.ponto(x, 93, '#c9ccd1', 5) + SV.txt(x, 122, nome, cA, 12, 700);
+  const pinoBase = (x, nome) => SV.ponto(x, 507, '#c9ccd1', 5) + SV.txt(x, 478, nome, cA, 12, 700);
+  o += pinoTop(520, 'GND') + pinoTop(650, 'D2') + pinoBase(500, '5V') + pinoBase(560, 'GND') + pinoBase(660, 'A0');
+  // pull-up interno
+  o += SV.fio([[650, 140], [650, 200]], T.dim, 1.6, 'stroke-dasharray="5 4"');
+  o += `<path d="M650 200 l8 6 l-16 12 l16 12 l-16 12 l16 12 l-8 6" fill="none" stroke="${cA}" stroke-width="1.8" opacity=".8"/>`;
+  o += SV.fio([[650, 260], [650, 270]], T.dim, 1.6, 'stroke-dasharray="5 4"');
+  o += SV.txt(636, 222, 'pull-up interno', cA, 11, 400, 'end', 'opacity=".85"') + SV.txt(636, 238, '20–50 kΩ até 5 V', cA, 10, 400, 'end', 'opacity=".7"');
+  // BOTAO: D2 -> botao -> GND
+  o += `<g ${apagado(S === 0)}>`;
+  o += SV.fio([[650, 93], [650, 40], [240, 40], [240, 120]], cor(nivelD2), 3.2);
+  o += SV.fio([[240, 190], [240, 230], [130, 230]], T.lo, 3.2) + SV.txt(118, 230, 'GND', T.lo, 12, 700, 'end');
+  o += SV.fio([[520, 93], [520, 56], [300, 56], [300, 230], [240, 230]], T.lo, 2.2, 'stroke-dasharray="7 5"');
+  o += SV.ponto(240, 120, T.edge, 5) + SV.ponto(240, 190, T.edge, 5);
+  o += b ? SV.fio([[226, 120], [226, 190]], T.edge, 4) : SV.fio([[240, 120], [214, 182]], T.edge, 4);
+  o += SV.ret(196, 136, 14, 38, T.body, T.dim, 1.5, 3);
+  o += `<g class="clic" id="fioBot">${SV.ret(60, 110, 170, 96, 'transparent', 'transparent', 0)}` +
+       SV.txt(150, 96, 'BOTÃO', T.txt, 14, 700) + SV.txt(150, 150, b ? 'pressionado' : 'solto', b ? T.hi : T.dim, 12, 700, 'end') + '</g>';
+  o += SV.txt(445, 26, `D2 = ${nivelD2} (${nivelD2 ? 'HIGH' : 'LOW'})  →  normalizado: ${b} = ${b ? 'pressionado' : 'solto'}`, cor(nivelD2), 12, 700);
+  o += '</g>';
+  // POTENCIOMETRO: 5V e GND nas pontas, cursor em A0
+  o += `<g ${apagado(S === 1)}>`;
+  o += SV.fio([[500, 507], [500, 570], [180, 570], [180, 470]], T.x, 3.2) + SV.txt(190, 556, '5 V', T.x, 12, 700, 'start');
+  o += SV.fio([[560, 507], [560, 586], [100, 586], [100, 330], [180, 330]], T.lo, 3.2) + SV.txt(108, 344, 'GND', T.lo, 12, 700, 'start');
+  o += `<path d="M180 470 l0 -10 l14 -7 l-28 -14 l28 -14 l-28 -14 l28 -14 l-28 -14 l28 -14 l-14 -7 l0 -10" fill="none" stroke="${T.edge}" stroke-width="2.6"/>`;
+  o += SV.fio([[180, 340], [180, 330]], T.edge, 2.6);
+  const yc = 460 - (cod / 1023) * 120;
+  o += SV.fio([[660, 507], [660, 548], [370, 548], [370, yc], [204, yc]], corA0, 3.2);
+  o += `<path d="M204 ${yc} l14 -8 l0 16 z" fill="${corA0}" transform="rotate(180 211 ${yc})"/>`;
+  o += SV.txt(150, 300, 'POTENCIÔMETRO 10 kΩ', T.txt, 14, 700);
+  o += SV.txt(200, 494, `cursor → A0`, T.dim, 11, 400, 'start') + SV.txt(200, 512, `${br(v, 2)} V · código ${cod}`, corA0, 12, 700, 'start');
+  o += '</g>';
+  // USB -> PC -> navegador
+  const usb = {ok: T.dim, sim: T.dim, caiu: C.verm, ocupada: C.verm, procurando: C.laranja}[st.estado] || T.dim;
+  o += SV.fio([[750, 300], [840, 300]], usb, 7, st.estado === 'ok' ? '' : 'stroke-dasharray="10 7"');
+  o += SV.txt(795, 282, 'USB', T.dim, 11, 700) + SV.txt(795, 320, st.estado === 'sim' ? 'simulado' : (st.porta || ''), usb, 10, 700);
+  const bloco = (y, t1, t2, t3) => SV.ret(840, y, 300, 92, T.body, T.edge, 2.2, 12) + SV.txt(990, y + 22, t1, T.txt, 14, 700) +
+    SV.txt(990, y + 48, t2, T.dim, 11) + SV.txt(990, y + 68, t3, T.dim, 11);
+  o += bloco(130, 'Arduino → serial', '$seq,canal,t_ms,valor*CK', '115.200 baud · 2 canais × 50/s');
+  o += bloco(254, 'PC · Python (Flask)', 'valida checksum e sequência', 'MUX 2:1 com S → saída Y');
+  o += bloco(378, 'Navegador (esta página)', 'API HTTP + SSE (~25 quadros/s)', `mostra só o canal S = ${S}`);
+  o += SV.fio([[990, 222], [990, 254]], T.dim, 2.2) + SV.fio([[990, 346], [990, 378]], T.dim, 2.2);
+  o += SV.txt(990, 500, S === 0 ? 'botão em destaque · potenciômetro esmaecido (não selecionado)' : 'potenciômetro em destaque · botão esmaecido (não selecionado)', T.dim, 11);
+  if (sim) o += SV.txt(150, 70, 'simulação: clique e segure no botão', T.x, 11, 700);
+  o += '</svg>';
+  $('svgFio').innerHTML = o;
+  const fb = $('svgFio').querySelector('#fioBot');
+  if (fb && sim) { fb.onpointerdown = () => simBot(1); fb.onpointerup = fb.onpointerleave = () => simBot(0); }
+}
+
+// ============================== pagina: ONDAS ==============================
+function pgOndas() {
+  const [c, w, h] = prepara($('cvOndas'));
+  const O = E.ondas, pl = 140, pr = 20, pt = 10, pb = 44, W = w - pl - pr;
+  const tEnd = O.length ? O[O.length - 1][0] : 0, t0 = tEnd - 10, X = t => pl + (t - t0) / 10 * W;
+  const lanes = [['S (seleção)', 1, C.laranja, 'd'], ['I0 · botão D2', 2, C.verde, 'd'], ['I1 · pot. A0', 3, C.azul, 'a'], ['Y = saída', 4, C.indigo, 'y']];
+  const lh = (h - pt - pb) / lanes.length;
+  c.textBaseline = 'middle';
+  for (let s = 0; s <= 10; s += 2) { const xx = pl + W - s / 10 * W; c.strokeStyle = C.sep; c.setLineDash([2, 4]);
+    c.beginPath(); c.moveTo(xx, pt); c.lineTo(xx, h - pb); c.stroke(); c.setLineDash([]);
+    c.fillStyle = C.muted; c.textAlign = 'center'; c.fillText(s ? `−${s} s` : 'agora', xx, h - pb + 12); }
+  lanes.forEach(([nome, idx, cor, tipo], r) => {
+    const y0 = pt + r * lh, yh = y0 + 10, yl = y0 + lh - 12;
+    c.fillStyle = mix(C.card, C.card2, 1); rrect(c, pl, y0 + 4, W, lh - 8, 8); c.fill();
+    c.fillStyle = cor; c.textAlign = 'right'; c.font = '700 12px ' + getComputedStyle(document.body).getPropertyValue('--mono');
+    c.fillText(nome, pl - 12, y0 + lh / 2);
+    if (!O.length) return;
+    c.beginPath(); let prev = null, prevS = null;
+    for (const q of O) {
+      if (q[0] < t0) continue;
+      let yy;
+      if (tipo === 'd') yy = q[idx] ? yh : yl;
+      else if (tipo === 'a') yy = yl - q[idx] / 1023 * (yl - yh);
+      else yy = q[1] ? yl - q[4] / 1023 * (yl - yh) : (q[4] ? yh : yl);
+      const x = X(q[0]);
+      if (prev === null || (tipo === 'y' && q[1] !== prevS)) { if (prev !== null) c.lineTo(x, prev); c.moveTo(x, prev === null ? yy : prev); c.lineTo(x, yy); }
+      else if (tipo === 'd') { c.lineTo(x, prev); c.lineTo(x, yy); } else c.lineTo(x, yy);
+      prev = yy; prevS = q[1];
+    }
+    c.strokeStyle = cor; c.lineWidth = 2.2; c.stroke();
+    if (tipo === 'y') {                          // faixa colorida indicando de onde vem Y
+      for (const q of O) if (q[0] >= t0) { c.fillStyle = mix(C.card2, q[1] ? C.azul : C.verde, .35); c.fillRect(X(q[0]), y0 + lh - 9, Math.max(1.5, W / 250), 4); }
+    }
+  });
+  c.fillStyle = C.muted; c.textAlign = 'left'; c.font = '11px ' + getComputedStyle(document.body).getPropertyValue('--ui');
+  c.fillText('Y: faixa verde = copiando I0 (botão) · faixa azul = copiando I1 (potenciômetro)', pl, h - 6);
+}
+
+// ============================== pagina: PROTOCOLO ==============================
+function pgProtocolo() {
+  const st = E.st;
+  const lin = E.linhas.slice().reverse().map(l => `<div class="lin"><span class="mut">${l[0].slice(0, 12)}</span>  <span class="${l[2] ? 'ok' : 'no'}">${l[2] ? '✓' : '✗'}</span> ${l[1].replace(/</g, '&lt;')}${l[2] ? '' : '  <span class="no">← ' + l[3] + '</span>'}</div>`).join('') || '<div class="mut">nenhuma mensagem ainda</div>';
+  const chip = t => `<span class="chip">${t}</span>`, sa = '<span class="seta">→</span>';
+  $('protBox').innerHTML = `
+    <div class="bloco" style="grid-column:1/3"><h3>Arquitetura e fluxo de dados</h3><div class="fluxo">
+      ${chip('Potenciômetro')}${sa}${chip('A0')}${sa}${chip('ADC 10 bits · ATmega328P')}${sa}${chip('Arduino')}${sa}${chip('USB / serial')}${sa}${chip('Python / API')}${sa}${chip('navegador')}<br>
+      ${chip('Botão')}${sa}${chip('D2 (INPUT_PULLUP + debounce)')}${sa}${chip('Arduino')}${sa}${chip('USB / serial')}${sa}${chip('Python / API')}${sa}${chip('navegador')}<br>
+      ${chip('Seleção S (navegador)')}${sa}${chip('POST /api/s')}${sa}${chip('MUX 2:1 em Python')}${sa}${chip('SSE: só o canal selecionado')}<br>
+      <b style="font-size:12px;color:var(--indigo)">IoT:</b> ${chip('PC (Python)')}${sa}${chip('broker MQTT · HiveMQ')}${sa}${chip('página no GitHub Pages')}${sa}${chip('celular')} &nbsp;e de volta: ${chip('chave S no celular')}${sa}${chip('tópico /cmd')}${sa}${chip('PC aplica o MUX')}</div></div>
+    <div class="bloco" style="grid-column:1/3"><h3>Acesso remoto (IoT) · MQTT</h3>
+      <table class="t" style="font-size:12px">
+        <tr><th>tópico</th><th>quem publica</th><th>conteúdo</th></tr>
+        <tr><td>${TOPICO}/dados</td><td style="font-family:var(--ui)">PC</td><td style="font-family:var(--ui);text-align:left">amostras novas já passadas pelo MUX, estado da conexão e eventos (~7 mensagens/s)</td></tr>
+        <tr><td>${TOPICO}/hist</td><td style="font-family:var(--ui)">PC</td><td style="font-family:var(--ui);text-align:left">janela de 30 s do canal selecionado, quando a página pede</td></tr>
+        <tr><td>${TOPICO}/online</td><td style="font-family:var(--ui)">PC</td><td style="font-family:var(--ui);text-align:left">1 = PC ligado · 0 = PC caiu (mensagem retida + “last will” do MQTT)</td></tr>
+        <tr><td>${TOPICO}/cmd</td><td style="font-family:var(--ui)">página</td><td style="font-family:var(--ui);text-align:left">{"s": 0|1}, {"zerar": 1}, {"hist": 1}, {"reconectar": 1}</td></tr>
+      </table>
+      <div class="nota" style="margin-top:8px">Broker público gratuito ${BROKER.replace('wss://', '')} (MQTT sobre WebSocket com TLS). O PC e o celular só fazem conexões de saída, então funciona atrás do roteador da universidade sem abrir portas. A página hospedada é estática (GitHub Pages); a lógica do MUX continua no Python do PC.</div></div>
+    <div class="bloco"><h3>Formato da mensagem serial</h3>
+      <div class="eq" style="font-size:13px">$&lt;seq&gt;,&lt;canal&gt;,&lt;t_ms&gt;,&lt;valor&gt;*&lt;CK&gt;<br><span class="mut">ex.:</span> ${E.linhas.length ? E.linhas[E.linhas.length - 1][1].replace(/</g, '&lt;') : '$1234,1,56789,512*3A'}</div>
+      <table class="t" style="margin-top:8px;font-size:12px">
+        <tr><th>campo</th><th>significado</th></tr>
+        <tr><td>seq</td><td style="font-family:var(--ui);text-align:left">contador 0…65535 · detecta amostras perdidas</td></tr>
+        <tr><td>canal</td><td style="font-family:var(--ui);text-align:left">0 = botão D2 (1 = pressionado) · 1 = potenciômetro A0 (0…1023)</td></tr>
+        <tr><td>t_ms</td><td style="font-family:var(--ui);text-align:left">instante da aquisição no Arduino (millis)</td></tr>
+        <tr><td>CK</td><td style="font-family:var(--ui);text-align:left">XOR dos caracteres entre $ e *, em hex</td></tr>
+      </table>
+      <div class="nota" style="margin-top:8px">Os dois canais são enviados a cada 20 ms (50 amostras/s cada) e o botão também na hora em que muda. A seleção fica com o servidor. Assinatura ao ligar: #LAB6,EEL280,…</div></div>
+    <div class="bloco"><h3>Últimas mensagens recebidas</h3>${lin}
+      <div class="nota" style="margin-top:8px">recebidas ${st.recebidas ?? 0} · perdidas ${st.perdidas ?? 0} · inválidas ${st.invalidas ?? 0} · ${st.estado === 'sim' ? 'geradas pela simulação no mesmo formato' : 'porta ' + (st.porta || '—')}</div></div>
+    <div class="bloco"><h3>API (Flask)</h3>
+      <table class="t" style="font-size:12px">
+        <tr><th>rota</th><th>função</th></tr>
+        <tr><td>GET /api/estado</td><td style="font-family:var(--ui);text-align:left">configuração, S e estado da conexão</td></tr>
+        <tr><td>POST /api/s</td><td style="font-family:var(--ui);text-align:left">{"s": 0 | 1} · troca a seleção sem reiniciar nada</td></tr>
+        <tr><td>GET /api/stream</td><td style="font-family:var(--ui);text-align:left">Server-Sent Events · saída Y, status e log (~25/s)</td></tr>
+        <tr><td>GET /api/historico</td><td style="font-family:var(--ui);text-align:left">janela de 30 s do canal selecionado</td></tr>
+        <tr><td>POST /api/reconectar</td><td style="font-family:var(--ui);text-align:left">procura o Arduino agora</td></tr>
+        <tr><td>GET /api/*.csv</td><td style="font-family:var(--ui);text-align:left">log de eventos e amostras</td></tr>
+      </table></div>
+    <div class="bloco"><h3>Falhas tratadas</h3><div class="nota" style="font-size:13px;color:var(--txt);line-height:1.6">
+      • <b>Repique do botão</b>: debounce de 25 ms no firmware.<br>
+      • <b>Mensagem corrompida</b>: checksum XOR · descartada e contada.<br>
+      • <b>Amostra perdida</b>: salto no número de sequência.<br>
+      • <b>Cabo desconectado</b>: erro de leitura → “desconectado”, nova tentativa a cada 3 s.<br>
+      • <b>Porta já aberta</b> (Monitor Serial, outra cópia): aviso “porta em uso”; no Linux/macOS a porta é aberta em modo exclusivo.<br>
+      • <b>Programa aberto duas vezes</b>: a 2ª cópia vê a porta HTTP ocupada e só abre o navegador na 1ª.<br>
+      • <b>Servidor parado</b>: a página mostra “API offline” e o EventSource reconecta sozinho.<br>
+      • <b>Sem amostras</b>: aviso quando passa 1 s sem dados.</div></div>`;
+}
+
+// ============================== laco de desenho ==============================
+const PAGINAS = [pgMonitor, pgCircuito, pgTabela, pgADC, pgFiacao, pgOndas, pgProtocolo];
+let ultDesenho = 0, ultLento = 0;
+function laco(t) {
+  requestAnimationFrame(laco);
+  const lento = E.aba === 2 || E.aba === 3 || E.aba === 6;     // paginas em HTML: ~6 quadros/s bastam
+  if (!E.sujo || t - ultDesenho < 33 || (lento && t - ultLento < 160)) return;
+  ultDesenho = t; if (lento) ultLento = t;
+  E.sujo = false;
+  try { atualizaPainel(); PAGINAS[E.aba](); } catch (e) { console.error(e); }
+}
+window.addEventListener('resize', () => E.sujo = true);
+setInterval(() => { if (E.sse === 'ok' && performance.now() - E.ultQuadro > 2500) { E.sse = IOT ? 'conectando' : 'erro'; E.sujo = true; } }, 1000);
+
+(async function inicia() {
+  ajustaFiltro();
+  if (IOT) { conectaIoT(); requestAnimationFrame(laco); return; }
+  try { const r = await (await fetch('/api/estado')).json(); E.cfg = r; E.st = r.st; aplicaS(r.s); ajustaFiltro(); }
+  catch (e) { E.sse = 'erro'; }
+  conectaSSE();
+  requestAnimationFrame(laco);
+})();
+</script>
+</body>
+</html>
